@@ -404,6 +404,11 @@ const Home = () => {
   return (
     <View style={styles.container}>
       <ScrollContainer>
+        <View style={styles.marginLeft10}>
+          <Text style={styles.textName}>
+            {user?.user?.username} {'ยอดรวม'} {user?.user?.total} {'บาท'}
+          </Text>
+        </View>
         <View style={styles.page}>
           <View style={styles.mainView1}>
             <CardContainer
