@@ -1,4 +1,4 @@
-import {Competition, Round} from '@component/Card/Board';
+import { Competition, Round } from '@component/Card/Board';
 
 export interface HomePageApiResponse {
   players: Players;
@@ -205,6 +205,8 @@ export interface GameResult {
   TimeRemainingSeconds: any;
   PointSpreadAwayTeamMoneyLine: number;
   PointSpreadHomeTeamMoneyLine: number;
+  currentTeam?: string;
+  defeatTeam?: string;
 }
 export interface Record {
   record_type: string;

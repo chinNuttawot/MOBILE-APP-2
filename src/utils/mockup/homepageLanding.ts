@@ -8,7 +8,7 @@ export const mockData = [
     competitions: [
       {name: 'Q1'},
       {name: 'Q2'},
-      {name: 'BR'},
+      {name: 'FH'},
       {name: 'Q3'},
       {name: 'Q4'},
       {name: 'FN'},
@@ -31,7 +31,7 @@ export const mockData = [
     competitions: [
       {name: 'Q1'},
       {name: 'Q2'},
-      {name: 'BR'},
+      {name: 'FH'},
       {name: 'Q3'},
       {name: 'Q4'},
       {name: 'FN'},
@@ -54,7 +54,7 @@ export const mockData = [
     competitions: [
       {name: 'Q1'},
       {name: 'Q2'},
-      {name: 'BR'},
+      {name: 'FH'},
       {name: 'Q3'},
       {name: 'Q4'},
       {name: 'FN'},
@@ -77,7 +77,7 @@ export const mockData = [
     competitions: [
       {name: 'Q1'},
       {name: 'Q2'},
-      {name: 'BR'},
+      {name: 'FH'},
       {name: 'Q3'},
       {name: 'Q4'},
       {name: 'FN'},
@@ -100,7 +100,7 @@ export const mockData = [
     competitions: [
       {name: 'Q1'},
       {name: 'Q2'},
-      {name: 'BR'},
+      {name: 'FH'},
       {name: 'Q3'},
       {name: 'Q4'},
       {name: 'FN'},
@@ -123,7 +123,7 @@ export const mockData = [
     competitions: [
       {name: 'Q1'},
       {name: 'Q2'},
-      {name: 'BR'},
+      {name: 'FH'},
       {name: 'Q3'},
       {name: 'Q4'},
       {name: 'FN'},
@@ -146,7 +146,7 @@ export const mockData = [
     competitions: [
       {name: 'Q1'},
       {name: 'Q2'},
-      {name: 'BR'},
+      {name: 'FH'},
       {name: 'Q3'},
       {name: 'Q4'},
       {name: 'FN'},
@@ -169,7 +169,7 @@ export const mockData = [
     competitions: [
       {name: 'Q1'},
       {name: 'Q2'},
-      {name: 'BR'},
+      {name: 'FH'},
       {name: 'Q3'},
       {name: 'Q4'},
       {name: 'FN'},
@@ -192,7 +192,7 @@ export const mockData = [
     competitions: [
       {name: 'Q1'},
       {name: 'Q2'},
-      {name: 'BR'},
+      {name: 'FH'},
       {name: 'Q3'},
       {name: 'Q4'},
       {name: 'FN'},
@@ -215,7 +215,7 @@ export const mockData = [
     competitions: [
       {name: 'Q1'},
       {name: 'Q2'},
-      {name: 'BR'},
+      {name: 'FH'},
       {name: 'Q3'},
       {name: 'Q4'},
       {name: 'FN'},

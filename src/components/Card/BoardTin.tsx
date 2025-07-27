@@ -52,7 +52,7 @@ function setQ(index: number): string {
   if (index === 0 || index === 1) {
     return `Q${index + 1}`;
   } else if (index === 2) {
-    return 'BR';
+    return 'FH';
   } else if (index === 3) {
     return `Q${3}`;
   } else if (index === 4) {

@@ -79,8 +79,8 @@ android {
         applicationId "com.recordscore.io"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 3
+        versionName "1.0.1"
     }
     signingConfigs {
         debug {
@@ -118,6 +118,16 @@ dependencies {
         implementation("com.facebook.react:hermes-android")
     } else {
         implementation jscFlavor
+    }
+}
+
+android.applicationVariants.all { variant ->
+    variant.outputs.all { output ->
+        def appName = "YG-APP"
+        def date = new Date().format("dd-MM-yyyy")
+        def versionName = variant.versionName
+        def newApkName = "${appName}-v${versionName}-${date}.apk"
+        outputFileName = newApkName
     }
 }
 

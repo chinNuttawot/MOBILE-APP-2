@@ -4,6 +4,7 @@ import React, {useEffect, useState} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Search from '@component/Search';
 import {
+  CardAllPatricia,
   CardBoard,
   CardBoardSmall,
   CardContainer,
@@ -11,7 +12,11 @@ import {
 } from '@component/Card';
 import {BoardItem} from '@component/Card/Board';
 import ScrollContainer from '@component/ScrollContainer';
-import {homePageListApi, homePageListWNBAApi} from '@lib/action/nbaAction';
+import {
+  homePageListApi,
+  homePageListWNBAApi,
+  totalTeamApi,
+} from '@lib/action/nbaAction';
 import {getprofileApi} from '@lib/action/userAction';
 import modal from '@lib/store/store';
 import {
@@ -25,6 +30,7 @@ import {recordNBAApi, recordWNBAApi} from '@lib/action/userAction';
 import {GameResult, PlayerResult, Record} from '@lib/constant/nba.contants';
 import TabScroll from '@component/TabScroll';
 import _ from 'lodash';
+import uuid from 'react-native-uuid';
 
 const template = {
   isWin: false,
@@ -34,13 +40,8 @@ const template = {
 const screenWidth = Dimensions.get('window').width;
 
 const Home = () => {
-  const [comings, setComings] = useState<BoardItem[]>([]);
-  const [currentGame, setCurrentGame] = useState<BoardItem[]>([]);
-  const [records, setRecords] = useState<BoardItem[]>([]);
-
-  const [comingsWNBA, setComingsWNBA] = useState<BoardItem[]>([]);
-  const [currentGameWNBA, setCurrentGameWNBA] = useState<BoardItem[]>([]);
-  const [recordsWNBA, setRecordsWNBA] = useState<BoardItem[]>([]);
+  const [dataCurrentTeam, setDataCurrentTeam] = useState<any[]>([]);
+  const [dataDefeatTeam, setDataDefeatTeam] = useState<any[]>([]);
 
   const [user, setuser] = useState<any>('');
   const [activeTab, setActiveTab] = useState(0); // 0 for NBA, 1 for WNBA
@@ -67,87 +68,117 @@ const Home = () => {
   }
 
   async function loadApi() {
-    const [nbaRes, wnbaRes] = await Promise.all([
-      homePageListApi(),
-      homePageListWNBAApi(),
-    ]);
-
-    if (!nbaRes.success) {
-      modal.error({title: 'มีข้อผิดพลาดในระบบ NBA', description: ''});
-
-      return;
-    }
-
-    if (!wnbaRes.success) {
-      modal.error({title: 'มีข้อผิดพลาดในระบบ WNBA', description: ''});
-
-      return;
-    }
-
+    // const [nbaRes, wnbaRes] = await Promise.all([
+    //   homePageListApi(),
+    //   homePageListWNBAApi(),
+    // ]);
+    // if (!nbaRes.success) {
+    //   modal.error({title: 'มีข้อผิดพลาดในระบบ NBA', description: ''});
+    //   return;
+    // }
+    // if (!wnbaRes.success) {
+    //   modal.error({title: 'มีข้อผิดพลาดในระบบ WNBA', description: ''});
+    //   return;
+    // }
     // NBA
-    const rawDataNBA = nbaRes.data?.nextGame?.result ?? [];
-    const playersNBA = nbaRes.data?.players.result ?? [];
-    const rewRecordsNBA = nbaRes.data?.record ?? [];
-
-    await autoStart(rawDataNBA, playersNBA, rewRecordsNBA, 'nba');
-
+    // const rawDataNBA = nbaRes.data?.nextGame?.result ?? [];
+    // const playersNBA = nbaRes.data?.players.result ?? [];
+    // const rewRecordsNBA = nbaRes.data?.record ?? [];
+    // await autoStart(rawDataNBA, playersNBA, rewRecordsNBA, 'nba');
     // WNBA
-    const rawDataWNBA = wnbaRes.data?.nextGame?.result ?? [];
-    const playersWNBA = wnbaRes.data?.players.result ?? [];
-    const rewRecordsWNBA = wnbaRes.data?.record ?? [];
-
-    await autoStart2(rawDataWNBA, playersWNBA, rewRecordsWNBA, 'wnba');
-
+    // const rawDataWNBA = wnbaRes.data?.nextGame?.result ?? [];
+    // const playersWNBA = wnbaRes.data?.players.result ?? [];
+    // const rewRecordsWNBA = wnbaRes.data?.record ?? [];
+    // await autoStart2(rawDataWNBA, playersWNBA, rewRecordsWNBA, 'wnba');
     await setupApi();
   }
 
   async function setupApi() {
-    const [nbaRes, wnbaRes] = await Promise.all([
-      homePageListApi(),
-      homePageListWNBAApi(),
-    ]);
+    try {
+      const [nbaRes, wnbaRes] = await Promise.all([
+        homePageListApi(),
+        homePageListWNBAApi(),
+      ]);
 
-    if (!nbaRes.success) {
-      modal.error({title: 'มีข้อผิดพลาดในระบบ NBA', description: ''});
+      if (!nbaRes.success) {
+        modal.error({title: 'มีข้อผิดพลาดในระบบ NBA', description: ''});
+        return;
+      }
 
-      return;
+      if (!wnbaRes.success) {
+        modal.error({title: 'มีข้อผิดพลาดในระบบ WNBA', description: ''});
+        return;
+      }
+
+      // เตรียมข้อมูลทีมจากผลการแข่งขัน NBA และ WNBA
+      const extractTeams = (data: any[]) =>
+        data.map(v => ({
+          currentTeam: v.currentTeam,
+          defeatTeam: v.defeatTeam,
+        }));
+
+      const rawDataNBA = nbaRes.data?.nextGame?.result ?? [];
+      const rawDataWNBA = wnbaRes.data?.nextGame?.result ?? [];
+
+      const teamPairs = [
+        ...extractTeams(rawDataWNBA),
+        ...extractTeams(rawDataNBA),
+      ];
+
+      const type = await AsyncStorage.getItem('type');
+      const _pushDataCurrentTeams: any[] = [];
+      const _pushDataDefeatTeams: any[] = [];
+
+      // ใช้ for...of เพื่อให้สามารถใช้ await ได้ภายใน loop
+      for (const team of teamPairs) {
+        const [currentTeams, defeatTeams] = await Promise.all([
+          totalTeamApi({
+            type: Number(type),
+            teamId: team.currentTeam.toString(),
+          }),
+          totalTeamApi({
+            type: Number(type),
+            teamId: team.defeatTeam.toString(),
+          }),
+        ]);
+
+        const getLatestRecord = (data: any, _pushDatas: any) => {
+          let allRecords = [...data.rawRecord, ...data.recordLasts];
+          allRecords = allRecords
+            .map(v => ({...v, uuid: `${v.currentTeam}-${v.defeatTeam}`}))
+            .sort(
+              (a, b) =>
+                new Date(b.DateTimeUTC).getTime() -
+                new Date(a.DateTimeUTC).getTime(),
+            );
+
+          let nextIndex = -1;
+
+          for (let i = 0; i < allRecords.length; i++) {
+            const isDuplicate = _pushDatas.some(
+              item => item.uuid === allRecords[i].uuid,
+            );
+
+            if (!isDuplicate) {
+              nextIndex = i;
+              break;
+            }
+          }
+
+          if (nextIndex !== -1) {
+            _pushDatas.push(allRecords[nextIndex]);
+          }
+        };
+
+        getLatestRecord(currentTeams.data, _pushDataCurrentTeams);
+        getLatestRecord(defeatTeams.data, _pushDataDefeatTeams);
+      }
+
+      setDataCurrentTeam(_pushDataCurrentTeams);
+      setDataDefeatTeam(_pushDataDefeatTeams);
+    } catch (error) {
+      modal.error({title: 'เกิดข้อผิดพลาด', description: error.message || ''});
     }
-
-    if (!wnbaRes.success) {
-      modal.error({title: 'มีข้อผิดพลาดในระบบ WNBA', description: ''});
-
-      return;
-    }
-
-    // NBA
-    const players = nbaRes.data?.players.result ?? [];
-    const _currentGame = nbaRes.data?.currentGame?.result ?? [];
-    const rawData = nbaRes.data?.nextGame?.result ?? [];
-    const rewRecords =
-      nbaRes.data?.record?.filter(i => i.record_type === 'nba') ?? [];
-
-    setComings(rawData.map(item => mapGameDataToTeamStructure(item, players)));
-    setCurrentGame(
-      _currentGame.map(item => mapGameDataToTeamStructure(item, players)),
-    );
-    setRecords(rewRecords.map(item => item.record_data));
-
-    // WNBA
-    const playersWNBA = wnbaRes.data?.players.result ?? [];
-    const _currentGameWNBA = wnbaRes.data?.currentGame?.result ?? [];
-    const rawDataWNBA = wnbaRes.data?.nextGame?.result ?? [];
-    const rewRecordsWNBA =
-      wnbaRes.data?.record?.filter(i => i.record_type === 'wnba') ?? [];
-    setComingsWNBA(
-      rawDataWNBA.map(item => mapGameDataToTeamStructure2(item, playersWNBA)),
-    );
-    setCurrentGameWNBA(
-      _currentGameWNBA.map(item =>
-        mapGameDataToTeamStructure2(item, playersWNBA),
-      ),
-    );
-
-    setRecordsWNBA(rewRecordsWNBA.map(item => item.record_data));
   }
 
   // auto
@@ -305,86 +336,42 @@ const Home = () => {
   return (
     <View style={styles.container}>
       <ScrollContainer>
-        <Search onChangeText={handleSearch} />
+        <View style={styles.page}>
+          <View style={styles.mainView1}>
+            <CardContainer
+              header={`${I18n().comings} - (ทีมเจ้าบ้าน)`}
+              data={dataCurrentTeam}
+              renderItem={({item}) => <CardAllPatricia item={item} />}
+              ListFooterComponent={undefined}
+            />
+          </View>
 
-        <View style={styles.marginLeft10}>
-          <Text style={styles.textName}>
-            {user?.user?.username} {'ยอดรวม'} {user?.user?.total} {'บาท'}
-          </Text>
+          <View style={styles.mainView2}>
+            <CardContainer
+              header={`${I18n().comings} - (ทีมเยือน)`}
+              data={dataDefeatTeam}
+              renderItem={({item}) => <CardAllPatricia item={item} />}
+              ListFooterComponent={undefined}
+            />
+          </View>
         </View>
-
-        {/* Tabs */}
-        <TabScroll
-          activeTab={activeTab}
-          onTabPressOne={async () => {
-            await AsyncStorage.setItem('type', _.toString(0));
-            onTabPress(0);
-          }}
-          onTabPressTwo={async () => {
-            await AsyncStorage.setItem('type', _.toString(1));
-            onTabPress(1);
-          }}
-        />
-
-        {/* Scrollable content */}
-        {activeTab === 0 ? (
-          <View style={styles.page}>
-            <CardContainer
-              header={I18n().currentlyPlaying}
-              data={[{...records[0]}]}
-              renderItem={({item}) => <CardBoard item={item} />}
-              ListFooterComponent={undefined}
-            />
-
-            <CardContainer
-              header={I18n().playingHistory}
-              data={records}
-              horizontal
-              renderItem={({item}) => <CardBoardSmall item={item} />}
-              ListFooterComponent={undefined}
-            />
-
-            <CardContainer
-              header={I18n().comings}
-              data={comings}
-              renderItem={({item}) => <CardRecommend item={item} />}
-              ListFooterComponent={undefined}
-            />
-          </View>
-        ) : (
-          <View style={styles.page}>
-            {/* WNBA */}
-            <>
-              <CardContainer
-                header={I18n().currentlyPlaying}
-                data={[{...recordsWNBA[0]}]}
-                renderItem={({item}) => <CardBoard item={item} />}
-                ListFooterComponent={undefined}
-              />
-
-              <CardContainer
-                header={I18n().playingHistory}
-                data={recordsWNBA}
-                horizontal
-                renderItem={({item}) => <CardBoardSmall item={item} />}
-                ListFooterComponent={undefined}
-              />
-
-              <CardContainer
-                header={I18n().comings}
-                data={comingsWNBA}
-                renderItem={({item}) => <CardRecommend item={item} />}
-                ListFooterComponent={undefined}
-              />
-            </>
-          </View>
-        )}
       </ScrollContainer>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  mainView1: {
+    backgroundColor: '#123416ff',
+    padding: 16,
+    borderRadius: 16,
+  },
+  mainView2: {
+    marginTop: 30,
+    backgroundColor: '#131234ff',
+    padding: 16,
+    borderRadius: 16,
+  },
   container: {
     flex: 1,
     backgroundColor: '#000000',
@@ -412,8 +399,9 @@ const styles = StyleSheet.create({
   },
   textName: {color: '#FFF', fontSize: 18, fontFamily: 'Prompt-Regular'},
   page: {
-    width: screenWidth,
-    padding: 20,
+    // flexDirection: 'row',
+    // width: screenWidth,
+    // padding: 20,
   },
   marginLeft10: {},
 });

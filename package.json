@@ -28,6 +28,7 @@
     "react-native-safe-area-context": "^4.14.0",
     "react-native-screens": "^4.2.0",
     "react-native-svg": "^15.9.0",
+    "react-native-uuid": "^2.0.3",
     "react-redux": "^9.1.2",
     "redux-thunk": "^3.1.0",
     "zod": "^3.23.8"

@@ -43,7 +43,19 @@ const PlayHistory = ({route}: Props) => {
       modal.error({title: I18n().errorSystem, description: ''});
       return;
     }
-    setData(response.data);
+
+    // รวมทั้ง rawRecord และ recordLasts
+    const allRecords = [
+      ...response.data.rawRecord,
+      ...response.data.recordLasts,
+    ];
+
+    // เรียงตาม DateTimeUTC จากใหม่ไปเก่า
+    const sortedRecords = allRecords.sort((a, b) => {
+      return new Date(b.DateTimeUTC) - new Date(a.DateTimeUTC);
+    });
+
+    setData(sortedRecords);
   }
 
   return (
@@ -54,14 +66,8 @@ const PlayHistory = ({route}: Props) => {
         {!_.isEmpty(data) && (
           <CardContainer
             header={I18n().allparticipating}
-            data={data.rawRecord}
+            data={data}
             renderItem={({item}) => <CardAllPatricia item={item} />}
-            ListFooterComponent={
-              data?.recordLasts &&
-              data?.recordLasts?.length > 0 && (
-                <CardAllPatricia item={data.recordLasts[0]} />
-              )
-            }
           />
         )}
       </ScrollContainer>

@@ -23,10 +23,12 @@ type LeagueDetailScreenNavigationProp = StackNavigationProp<
 >;
 
 const Login = () => {
-  const [username, setUsername] = useState<string>(__DEV__ ? 'johndoe' : '');
-  const [password, setPassword] = useState<string>(
-    __DEV__ ? 'new_user_password' : '',
-  );
+  const [username, setUsername] = useState<string>(__DEV__ ? 'A1' : '');
+  const [password, setPassword] = useState<string>(__DEV__ ? '999999' : '');
+  // const [username, setUsername] = useState<string>(__DEV__ ? 'johndoe' : '');
+  // const [password, setPassword] = useState<string>(
+  //   __DEV__ ? 'new_user_password' : '',
+  // );
   const [isLoading, setLoading] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(true);
   const [checkBox, setCheckBox] = useState<boolean>(true);
@@ -38,17 +40,13 @@ const Login = () => {
 
     const response = await authLogin({data: {username, password}});
     if (!response.success) {
-      setLoading(false);
-
       modal.push({
         title: 'เข้าสู่ระบบไม่สำเร็จ',
         description: 'เข้าสู่ระบบไม่สำเร็จ',
       });
-      return;
     }
 
     setLoading(false);
-    modal.push({title: 'เข้าสู่ระบบสำเร็จ', description: ''});
   }
 
   return (
