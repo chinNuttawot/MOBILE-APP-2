@@ -42,6 +42,13 @@ const screenWidth = Dimensions.get('window').width;
 const Home = () => {
   const [dataCurrentTeam, setDataCurrentTeam] = useState<any[]>([]);
   const [dataDefeatTeam, setDataDefeatTeam] = useState<any[]>([]);
+  const [comings, setComings] = useState<BoardItem[]>([]);
+  const [currentGame, setCurrentGame] = useState<BoardItem[]>([]);
+  const [records, setRecords] = useState<BoardItem[]>([]);
+
+  const [comingsWNBA, setComingsWNBA] = useState<BoardItem[]>([]);
+  const [currentGameWNBA, setCurrentGameWNBA] = useState<BoardItem[]>([]);
+  const [recordsWNBA, setRecordsWNBA] = useState<BoardItem[]>([]);
 
   const [user, setuser] = useState<any>('');
   const [activeTab, setActiveTab] = useState(0); // 0 for NBA, 1 for WNBA
@@ -68,28 +75,37 @@ const Home = () => {
   }
 
   async function loadApi() {
-    // const [nbaRes, wnbaRes] = await Promise.all([
-    //   homePageListApi(),
-    //   homePageListWNBAApi(),
-    // ]);
-    // if (!nbaRes.success) {
-    //   modal.error({title: 'มีข้อผิดพลาดในระบบ NBA', description: ''});
-    //   return;
-    // }
-    // if (!wnbaRes.success) {
-    //   modal.error({title: 'มีข้อผิดพลาดในระบบ WNBA', description: ''});
-    //   return;
-    // }
+    const [nbaRes, wnbaRes] = await Promise.all([
+      homePageListApi(),
+      homePageListWNBAApi(),
+    ]);
+
+    if (!nbaRes.success) {
+      modal.error({title: 'มีข้อผิดพลาดในระบบ NBA', description: ''});
+
+      return;
+    }
+
+    if (!wnbaRes.success) {
+      modal.error({title: 'มีข้อผิดพลาดในระบบ WNBA', description: ''});
+
+      return;
+    }
+
     // NBA
-    // const rawDataNBA = nbaRes.data?.nextGame?.result ?? [];
-    // const playersNBA = nbaRes.data?.players.result ?? [];
-    // const rewRecordsNBA = nbaRes.data?.record ?? [];
-    // await autoStart(rawDataNBA, playersNBA, rewRecordsNBA, 'nba');
+    const rawDataNBA = nbaRes.data?.nextGame?.result ?? [];
+    const playersNBA = nbaRes.data?.players.result ?? [];
+    const rewRecordsNBA = nbaRes.data?.record ?? [];
+
+    await autoStart(rawDataNBA, playersNBA, rewRecordsNBA, 'nba');
+
     // WNBA
-    // const rawDataWNBA = wnbaRes.data?.nextGame?.result ?? [];
-    // const playersWNBA = wnbaRes.data?.players.result ?? [];
-    // const rewRecordsWNBA = wnbaRes.data?.record ?? [];
-    // await autoStart2(rawDataWNBA, playersWNBA, rewRecordsWNBA, 'wnba');
+    const rawDataWNBA = wnbaRes.data?.nextGame?.result ?? [];
+    const playersWNBA = wnbaRes.data?.players.result ?? [];
+    const rewRecordsWNBA = wnbaRes.data?.record ?? [];
+
+    await autoStart2(rawDataWNBA, playersWNBA, rewRecordsWNBA, 'wnba');
+
     await setupApi();
   }
 
@@ -103,13 +119,47 @@ const Home = () => {
 
       if (!nbaRes.success) {
         modal.error({title: 'มีข้อผิดพลาดในระบบ NBA', description: ''});
+
         return;
       }
 
       if (!wnbaRes.success) {
         modal.error({title: 'มีข้อผิดพลาดในระบบ WNBA', description: ''});
+
         return;
       }
+
+      // NBA
+      const players = nbaRes.data?.players.result ?? [];
+      const _currentGame = nbaRes.data?.currentGame?.result ?? [];
+      const rawDataNBA = nbaRes.data?.nextGame?.result ?? [];
+      const rewRecords =
+        nbaRes.data?.record?.filter(i => i.record_type === 'nba') ?? [];
+
+      setComings(
+        rawDataNBA.map(item => mapGameDataToTeamStructure(item, players)),
+      );
+      setCurrentGame(
+        _currentGame.map(item => mapGameDataToTeamStructure(item, players)),
+      );
+      setRecords(rewRecords.map(item => item.record_data));
+
+      // WNBA
+      const playersWNBA = wnbaRes.data?.players.result ?? [];
+      const _currentGameWNBA = wnbaRes.data?.currentGame?.result ?? [];
+      const rawDataWNBA = wnbaRes.data?.nextGame?.result ?? [];
+      const rewRecordsWNBA =
+        wnbaRes.data?.record?.filter(i => i.record_type === 'wnba') ?? [];
+      setComingsWNBA(
+        rawDataWNBA.map(item => mapGameDataToTeamStructure2(item, playersWNBA)),
+      );
+      setCurrentGameWNBA(
+        _currentGameWNBA.map(item =>
+          mapGameDataToTeamStructure2(item, playersWNBA),
+        ),
+      );
+
+      setRecordsWNBA(rewRecordsWNBA.map(item => item.record_data));
 
       // ดึงทีมที่เกี่ยวข้องจาก result
       const extractTeams = (data: any[]) =>
@@ -118,8 +168,6 @@ const Home = () => {
           defeatTeam: v.defeatTeam,
         }));
 
-      const rawDataNBA = nbaRes.data?.nextGame?.result ?? [];
-      const rawDataWNBA = wnbaRes.data?.nextGame?.result ?? [];
       const teamPairs = [
         ...extractTeams(rawDataWNBA),
         ...extractTeams(rawDataNBA),
@@ -419,7 +467,6 @@ const styles = StyleSheet.create({
   },
   textName: {color: '#FFF', fontSize: 18, fontFamily: 'Prompt-Regular'},
   page: {
-    // flexDirection: 'row',
     // width: screenWidth,
     // padding: 20,
   },
