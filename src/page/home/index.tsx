@@ -95,6 +95,7 @@ const Home = () => {
 
   async function setupApi() {
     try {
+      // เรียกข้อมูลจากทั้ง NBA และ WNBA พร้อมกัน
       const [nbaRes, wnbaRes] = await Promise.all([
         homePageListApi(),
         homePageListWNBAApi(),
@@ -110,7 +111,7 @@ const Home = () => {
         return;
       }
 
-      // เตรียมข้อมูลทีมจากผลการแข่งขัน NBA และ WNBA
+      // ดึงทีมที่เกี่ยวข้องจาก result
       const extractTeams = (data: any[]) =>
         data.map(v => ({
           currentTeam: v.currentTeam,
@@ -119,7 +120,6 @@ const Home = () => {
 
       const rawDataNBA = nbaRes.data?.nextGame?.result ?? [];
       const rawDataWNBA = wnbaRes.data?.nextGame?.result ?? [];
-
       const teamPairs = [
         ...extractTeams(rawDataWNBA),
         ...extractTeams(rawDataNBA),
@@ -129,55 +129,75 @@ const Home = () => {
       const _pushDataCurrentTeams: any[] = [];
       const _pushDataDefeatTeams: any[] = [];
 
-      // ใช้ for...of เพื่อให้สามารถใช้ await ได้ภายใน loop
-      for (const team of teamPairs) {
-        const [currentTeams, defeatTeams] = await Promise.all([
-          totalTeamApi({
-            type: Number(type),
-            teamId: team.currentTeam.toString(),
-          }),
-          totalTeamApi({
-            type: Number(type),
-            teamId: team.defeatTeam.toString(),
-          }),
-        ]);
-
-        const getLatestRecord = (data: any, _pushDatas: any) => {
-          let allRecords = [...data.rawRecord, ...data.recordLasts];
-          allRecords = allRecords
-            .map(v => ({...v, uuid: `${v.currentTeam}-${v.defeatTeam}`}))
-            .sort(
-              (a, b) =>
-                new Date(b.DateTimeUTC).getTime() -
-                new Date(a.DateTimeUTC).getTime(),
-            );
-
-          let nextIndex = -1;
-
-          for (let i = 0; i < allRecords.length; i++) {
-            const isDuplicate = _pushDatas.some(
-              item => item.uuid === allRecords[i].uuid,
-            );
-
-            if (!isDuplicate) {
-              nextIndex = i;
-              break;
-            }
-          }
-
-          if (nextIndex !== -1) {
-            _pushDatas.push(allRecords[nextIndex]);
-          }
-        };
-
-        getLatestRecord(currentTeams.data, _pushDataCurrentTeams);
-        getLatestRecord(defeatTeams.data, _pushDataDefeatTeams);
+      // 1. รวบรวม teamId ทั้งหมดแบบไม่ซ้ำ
+      const uniqueTeamIds = new Set<string>();
+      for (const pair of teamPairs) {
+        uniqueTeamIds.add(pair.currentTeam.toString());
+        uniqueTeamIds.add(pair.defeatTeam.toString());
       }
 
+      // 2. เรียกข้อมูลทุกทีมครั้งเดียว แล้วเก็บไว้ใน Map
+      const teamRecordMap = new Map<string, any>();
+      await Promise.all(
+        Array.from(uniqueTeamIds).map(async teamId => {
+          const res = await totalTeamApi({
+            type: Number(type),
+            teamId,
+          });
+          if (res?.data) {
+            teamRecordMap.set(teamId, res.data);
+          }
+        }),
+      );
+
+      // 3. ฟังก์ชันดึง record ล่าสุดที่ไม่ซ้ำจาก targetList
+      const getLatestRecord = (data: any, targetList: any[]) => {
+        if (!data) return null;
+
+        const allRecords = [
+          ...(data.rawRecord || []),
+          ...(data.recordLasts || []),
+        ]
+          .map(v => ({...v, uuid: `${v.currentTeam}-${v.defeatTeam}`}))
+          .sort(
+            (a, b) =>
+              new Date(b.DateTimeUTC).getTime() -
+              new Date(a.DateTimeUTC).getTime(),
+          );
+
+        return (
+          allRecords.find(
+            record => !targetList.some(item => item.uuid === record.uuid),
+          ) || null
+        );
+      };
+
+      // 4. วนทีละคู่ แล้วดึงข้อมูลจาก Map มาจัดกลุ่ม
+      for (const team of teamPairs) {
+        const currentTeamData = teamRecordMap.get(team.currentTeam.toString());
+        const defeatTeamData = teamRecordMap.get(team.defeatTeam.toString());
+
+        const currentRecord = getLatestRecord(
+          currentTeamData,
+          _pushDataCurrentTeams,
+        );
+        const defeatRecord = getLatestRecord(
+          defeatTeamData,
+          _pushDataDefeatTeams,
+        );
+
+        if (currentRecord) _pushDataCurrentTeams.push(currentRecord);
+        if (defeatRecord) _pushDataDefeatTeams.push(defeatRecord);
+      }
+
+      // 5. อัปเดต state
       setDataCurrentTeam(_pushDataCurrentTeams);
       setDataDefeatTeam(_pushDataDefeatTeams);
     } catch (error) {
-      modal.error({title: 'เกิดข้อผิดพลาด', description: error.message || ''});
+      modal.error({
+        title: 'เกิดข้อผิดพลาด',
+        description: error.message || '',
+      });
     }
   }
 
