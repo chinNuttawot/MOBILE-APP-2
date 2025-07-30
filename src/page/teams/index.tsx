@@ -88,22 +88,7 @@ const Teams = () => {
       homePageListApi(),
       homePageListWNBAApi(),
     ]);
-
-    if (!response.success) {
-      setLoading(false);
-
-      modal.error({title: 'มีข้อผิดพลาดในระบบ NBA', description: ''});
-
-      return;
-    }
-
-    if (!responseWNBA.success) {
-      setLoading(false);
-
-      modal.error({title: 'มีข้อผิดพลาดในระบบ WNBA', description: ''});
-
-      return;
-    }
+    setLoading(false);
 
     if (!response.success) {
       modal.error({title: I18n().errorSystem, description: ''});

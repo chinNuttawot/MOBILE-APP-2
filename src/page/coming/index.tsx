@@ -52,22 +52,7 @@ const Coming = () => {
       homePageListApi(),
       homePageListWNBAApi(),
     ]);
-
-    if (!response.success) {
-      setLoading(false);
-
-      modal.error({title: 'มีข้อผิดพลาดในระบบ NBA', description: ''});
-
-      return;
-    }
-
-    if (!responseWNBA.success) {
-      setLoading(false);
-
-      modal.error({title: 'มีข้อผิดพลาดในระบบ WNBA', description: ''});
-
-      return;
-    }
+    setLoading(false);
 
     const players = response.data?.players.result ?? [];
     const rawData = response.data?.nextGame?.result ?? [];

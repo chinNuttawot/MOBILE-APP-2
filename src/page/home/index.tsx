@@ -51,7 +51,7 @@ const Home = () => {
   const [recordsWNBA, setRecordsWNBA] = useState<BoardItem[]>([]);
 
   const [user, setuser] = useState<any>('');
-  const [activeTab, setActiveTab] = useState(0); // 0 for NBA, 1 for WNBA
+  const [activeTab, setActiveTab] = useState(1); // 0 for NBA, 1 for WNBA
 
   const scrollRef = React.useRef<ScrollView>(null);
   const isFocus = useIsFocused();
@@ -70,7 +70,6 @@ const Home = () => {
 
   async function profile() {
     const response = await getprofileApi(activeTab);
-
     setuser(response.data);
   }
 
@@ -79,18 +78,6 @@ const Home = () => {
       homePageListApi(),
       homePageListWNBAApi(),
     ]);
-
-    if (!nbaRes.success) {
-      modal.error({title: 'มีข้อผิดพลาดในระบบ NBA', description: ''});
-
-      return;
-    }
-
-    if (!wnbaRes.success) {
-      modal.error({title: 'มีข้อผิดพลาดในระบบ WNBA', description: ''});
-
-      return;
-    }
 
     // NBA
     const rawDataNBA = nbaRes.data?.nextGame?.result ?? [];
@@ -116,18 +103,6 @@ const Home = () => {
         homePageListApi(),
         homePageListWNBAApi(),
       ]);
-
-      if (!nbaRes.success) {
-        modal.error({title: 'มีข้อผิดพลาดในระบบ NBA', description: ''});
-
-        return;
-      }
-
-      if (!wnbaRes.success) {
-        modal.error({title: 'มีข้อผิดพลาดในระบบ WNBA', description: ''});
-
-        return;
-      }
 
       // NBA
       const players = nbaRes.data?.players.result ?? [];
@@ -170,7 +145,7 @@ const Home = () => {
 
       const teamPairs = [
         ...extractTeams(rawDataWNBA),
-        ...extractTeams(rawDataNBA),
+        // ...extractTeams(rawDataNBA),
       ];
 
       const type = await AsyncStorage.getItem('type');
@@ -406,7 +381,8 @@ const Home = () => {
       <ScrollContainer>
         <View style={styles.marginLeft10}>
           <Text style={styles.textName}>
-            {user?.user?.username} {'ยอดรวม'} {user?.user?.total} {'บาท'}
+            {user?.user &&
+              `${user?.user?.username} ยอดรวม ${user?.user?.total} บาท (WNBA)`}
           </Text>
         </View>
         <View style={styles.page}>
@@ -475,7 +451,7 @@ const styles = StyleSheet.create({
     // width: screenWidth,
     // padding: 20,
   },
-  marginLeft10: {},
+  marginLeft10: {marginLeft: 10},
 });
 
 export default Home;
