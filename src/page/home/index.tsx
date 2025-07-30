@@ -1,5 +1,12 @@
 /* eslint-disable react-native/no-unused-styles */
-import {View, StyleSheet, Text, Dimensions, ScrollView} from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Text,
+  Dimensions,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
 import React, {useEffect, useState} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Search from '@component/Search';
@@ -40,6 +47,7 @@ const template = {
 const screenWidth = Dimensions.get('window').width;
 
 const Home = () => {
+  const [isLoading, setIsloding] = useState<boolean>(true);
   const [dataCurrentTeam, setDataCurrentTeam] = useState<any[]>([]);
   const [dataDefeatTeam, setDataDefeatTeam] = useState<any[]>([]);
   const [comings, setComings] = useState<BoardItem[]>([]);
@@ -67,6 +75,10 @@ const Home = () => {
   useEffect(() => {
     profile();
   }, [activeTab]);
+
+  useEffect(() => {
+    getAPIViewItem();
+  }, []);
 
   async function profile() {
     const response = await getprofileApi(activeTab);
@@ -133,89 +145,7 @@ const Home = () => {
           mapGameDataToTeamStructure2(item, playersWNBA),
         ),
       );
-
       setRecordsWNBA(rewRecordsWNBA.map(item => item.record_data));
-
-      // ดึงทีมที่เกี่ยวข้องจาก result
-      const extractTeams = (data: any[]) =>
-        data.map(v => ({
-          currentTeam: v.currentTeam,
-          defeatTeam: v.defeatTeam,
-        }));
-
-      const teamPairs = [
-        ...extractTeams(rawDataWNBA),
-        // ...extractTeams(rawDataNBA),
-      ];
-
-      const type = await AsyncStorage.getItem('type');
-      const _pushDataCurrentTeams: any[] = [];
-      const _pushDataDefeatTeams: any[] = [];
-
-      // 1. รวบรวม teamId ทั้งหมดแบบไม่ซ้ำ
-      const uniqueTeamIds = new Set<string>();
-      for (const pair of teamPairs) {
-        uniqueTeamIds.add(pair.currentTeam.toString());
-        uniqueTeamIds.add(pair.defeatTeam.toString());
-      }
-
-      // 2. เรียกข้อมูลทุกทีมครั้งเดียว แล้วเก็บไว้ใน Map
-      const teamRecordMap = new Map<string, any>();
-      await Promise.all(
-        Array.from(uniqueTeamIds).map(async teamId => {
-          const res = await totalTeamApi({
-            type: Number(type),
-            teamId,
-          });
-          if (res?.data) {
-            teamRecordMap.set(teamId, res.data);
-          }
-        }),
-      );
-
-      // 3. ฟังก์ชันดึง record ล่าสุดที่ไม่ซ้ำจาก targetList
-      const getLatestRecord = (data: any, targetList: any[]) => {
-        if (!data) return null;
-
-        const allRecords = [
-          ...(data.rawRecord || []),
-          ...(data.recordLasts || []),
-        ]
-          .map(v => ({...v, uuid: `${v.currentTeam}-${v.defeatTeam}`}))
-          .sort(
-            (a, b) =>
-              new Date(b.DateTimeUTC).getTime() -
-              new Date(a.DateTimeUTC).getTime(),
-          );
-
-        return (
-          allRecords.find(
-            record => !targetList.some(item => item.uuid === record.uuid),
-          ) || null
-        );
-      };
-
-      // 4. วนทีละคู่ แล้วดึงข้อมูลจาก Map มาจัดกลุ่ม
-      for (const team of teamPairs) {
-        const currentTeamData = teamRecordMap.get(team.currentTeam.toString());
-        const defeatTeamData = teamRecordMap.get(team.defeatTeam.toString());
-
-        const currentRecord = getLatestRecord(
-          currentTeamData,
-          _pushDataCurrentTeams,
-        );
-        const defeatRecord = getLatestRecord(
-          defeatTeamData,
-          _pushDataDefeatTeams,
-        );
-
-        if (currentRecord) _pushDataCurrentTeams.push(currentRecord);
-        if (defeatRecord) _pushDataDefeatTeams.push(defeatRecord);
-      }
-
-      // 5. อัปเดต state
-      setDataCurrentTeam(_pushDataCurrentTeams);
-      setDataDefeatTeam(_pushDataDefeatTeams);
     } catch (error) {
       modal.error({
         title: 'เกิดข้อผิดพลาด',
@@ -223,6 +153,97 @@ const Home = () => {
       });
     }
   }
+
+  const getAPIViewItem = async () => {
+    const [nbaRes, wnbaRes] = await Promise.all([
+      homePageListApi(),
+      homePageListWNBAApi(),
+    ]);
+
+    const rawDataNBA = nbaRes.data?.nextGame?.result ?? [];
+
+    // WNBA
+    const rawDataWNBA = wnbaRes.data?.nextGame?.result ?? [];
+    const teamPairs = [
+      ...extractTeams(rawDataWNBA),
+      // ...extractTeams(rawDataNBA),
+    ];
+
+    const type = await AsyncStorage.getItem('type');
+    const _pushDataCurrentTeams: any[] = [];
+    const _pushDataDefeatTeams: any[] = [];
+
+    // 1. รวบรวม teamId ทั้งหมดแบบไม่ซ้ำ
+    const uniqueTeamIds = new Set<string>();
+    for (const pair of teamPairs) {
+      uniqueTeamIds.add(pair.currentTeam.toString());
+      uniqueTeamIds.add(pair.defeatTeam.toString());
+    }
+
+    // 2. เรียกข้อมูลทุกทีมครั้งเดียว แล้วเก็บไว้ใน Map
+    const teamRecordMap = new Map<string, any>();
+    await Promise.all(
+      Array.from(uniqueTeamIds).map(async teamId => {
+        const res = await totalTeamApi({
+          type: Number(type),
+          teamId,
+        });
+        if (res?.data) {
+          teamRecordMap.set(teamId, res.data);
+        }
+      }),
+    );
+
+    // 3. ฟังก์ชันดึง record ล่าสุดที่ไม่ซ้ำจาก targetList
+    const getLatestRecord = (data: any, targetList: any[]) => {
+      if (!data) return null;
+
+      const allRecords = [
+        ...(data.rawRecord || []),
+        ...(data.recordLasts || []),
+      ]
+        .map(v => ({...v, uuid: `${v.currentTeam}-${v.defeatTeam}`}))
+        .sort(
+          (a, b) =>
+            new Date(b.DateTimeUTC).getTime() -
+            new Date(a.DateTimeUTC).getTime(),
+        );
+
+      return (
+        allRecords.find(
+          record => !targetList.some(item => item.uuid === record.uuid),
+        ) || null
+      );
+    };
+
+    // 4. วนทีละคู่ แล้วดึงข้อมูลจาก Map มาจัดกลุ่ม
+    for (const team of teamPairs) {
+      const currentTeamData = teamRecordMap.get(team.currentTeam.toString());
+      const defeatTeamData = teamRecordMap.get(team.defeatTeam.toString());
+
+      const currentRecord = getLatestRecord(
+        currentTeamData,
+        _pushDataCurrentTeams,
+      );
+      const defeatRecord = getLatestRecord(
+        defeatTeamData,
+        _pushDataDefeatTeams,
+      );
+
+      if (currentRecord) _pushDataCurrentTeams.push(currentRecord);
+      if (defeatRecord) _pushDataDefeatTeams.push(defeatRecord);
+    }
+
+    // 5. อัปเดต state
+    setDataCurrentTeam(_pushDataCurrentTeams);
+    setDataDefeatTeam(_pushDataDefeatTeams);
+    setIsloding(false);
+  };
+  const extractTeams = (data: any[]) =>
+    data.map(v => ({
+      currentTeam: v.currentTeam,
+      defeatTeam: v.defeatTeam,
+    }));
 
   // auto
   async function autoStart(
@@ -385,25 +406,29 @@ const Home = () => {
               `${user?.user?.username} ยอดรวม ${user?.user?.total} บาท (WNBA)`}
           </Text>
         </View>
-        <View style={styles.page}>
-          <View style={styles.mainView1}>
-            <CardContainer
-              header={`${I18n().comings} - (ทีมเจ้าบ้าน)`}
-              data={dataCurrentTeam}
-              renderItem={({item}) => <CardAllPatricia item={item} />}
-              ListFooterComponent={undefined}
-            />
-          </View>
+        {isLoading ? (
+          <ActivityIndicator size={'large'} />
+        ) : (
+          <View style={styles.page}>
+            <View style={styles.mainView1}>
+              <CardContainer
+                header={`${I18n().comings} - (ทีมเจ้าบ้าน)`}
+                data={dataCurrentTeam}
+                renderItem={({item}) => <CardAllPatricia item={item} />}
+                ListFooterComponent={undefined}
+              />
+            </View>
 
-          <View style={styles.mainView2}>
-            <CardContainer
-              header={`${I18n().comings} - (ทีมเยือน)`}
-              data={dataDefeatTeam}
-              renderItem={({item}) => <CardAllPatricia item={item} />}
-              ListFooterComponent={undefined}
-            />
+            <View style={styles.mainView2}>
+              <CardContainer
+                header={`${I18n().comings} - (ทีมเยือน)`}
+                data={dataDefeatTeam}
+                renderItem={({item}) => <CardAllPatricia item={item} />}
+                ListFooterComponent={undefined}
+              />
+            </View>
           </View>
-        </View>
+        )}
       </ScrollContainer>
     </View>
   );

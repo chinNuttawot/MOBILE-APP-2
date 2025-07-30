@@ -1,4 +1,12 @@
-import {StyleSheet, KeyboardAvoidingView, Platform} from 'react-native';
+import {
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import React, {useState} from 'react';
 import {useNavigation} from '@react-navigation/native';
 
@@ -85,10 +93,30 @@ const Login = () => {
         />
       </BetweenContainer>
 
-      <Button text={I18n().login} onPress={handleLogin} />
+      <TouchableOpacity
+        onPress={handleLogin}
+        disabled={isLoading}
+        style={{
+          backgroundColor: isLoading ? '#E0C200' : '#FFD700', // เหลืองหม่นเวลาโหลด
+          paddingVertical: 14,
+          paddingHorizontal: 20,
+          width: '100%',
+          borderRadius: 20,
+          alignItems: 'center',
+          opacity: isLoading ? 0.8 : 1,
+        }}>
+        {isLoading ? (
+          <ActivityIndicator color="#000" /> // สีดำตอนโหลด
+        ) : (
+          <Text style={{color: '#000', fontSize: 16, fontWeight: '500'}}>
+            {I18n().login}
+          </Text>
+        )}
+      </TouchableOpacity>
 
-      <Typography text={I18n().or} />
-
+      <View style={{padding: 16}}>
+        <Typography text={I18n().or} />
+      </View>
       <Button
         variant="tertiary"
         text={I18n().dontHaveAccount}
